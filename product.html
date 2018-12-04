@@ -84,7 +84,8 @@
       d3.json("https://raw.githubusercontent.com/anubala16/VA_Vega/master/us-10m.json")
     ]).then(([in_data, us]) => {
       in_data.forEach(d => {
-        d.Amount = +d.Amount;
+        //d.Amount = +d.Amount;
+		d.userCount += 1
       });
 
       // Data for choropleth chart

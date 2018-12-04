@@ -22,13 +22,16 @@ def readCSV():
     ''' Separate countries and states '''
     df = processCountryStates(df)
 
-    ''' Separate date '''
-    df = processDate(df)
-
     ''' Delete non-US rows '''
     df = getUSRecords(df)
     print("Only US Records:", df.shape)
     df.drop(columns=['Country'], inplace = True)
+
+    # sampling only 30% of data
+    df = df.sample(frac=0.3)
+
+    ''' Separate date '''
+    df = processDate(df)
 
     df.Product.fillna("unknown", inplace=True)
     print("Replaced product with unknowns")
@@ -39,7 +42,7 @@ def readCSV():
     # takes a long time!
     # Gets all the unique values and counts for each product, csource, date, and state
     # run once only :)
-    # df = preprocessRow(df)
+    df = preprocessRow(df)
 
     # Add state code column
     state = str(df['State'][1]).strip()
@@ -51,6 +54,7 @@ def readCSV():
 
     ''' Exporting entire df to csv file '''
     df.to_csv('data_subset.csv')
+    print("Wrote", df.shape[0], "rows to data_subset.csv")
 
 def preprocessRow(df):
     csources = {}
@@ -162,7 +166,6 @@ def processDate(df):
     new = df['Date'].str.split(" ", n=2, expand=True)
     df['Day'] = new[0]
     df['Month'] = new[1]
-    df['Year'] = new[2]
     return df
 
 def processCountryStates(df):
