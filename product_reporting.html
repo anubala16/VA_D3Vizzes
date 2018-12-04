@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <title>LT d3 bar chart and choropleth map</title>
+      <script src="https://d3js.org/d3.v5.min.js"></script>
+      <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+      <script src="https://d3js.org/topojson.v2.min.js"></script>
+      <!-- <script src="http://d3js.org/topojson.v2.min.js"></script>
+      <script src="https://unpkg.com/topojson-client@3"></script> -->
+      <style type="text/css">
+        body{
+          margin_bar: 0;
+        }
+
+        svg {
+          border: 1px solid rgb(206, 205, 205)
+        }
+
+        svg .myrect {
+            fill: green;
+            stroke-width: 0px;
+        }
+        svg .myrect:hover {
+            fill: yellow;
+        }
+
+        .all-states {
+          fill: none;
+        }
+
+        .state:hover {
+          fill: yellow;
+        }
+
+        .state-border {
+          fill: none;
+          stroke: #fff;
+          stroke-linejoin: round;
+        }
+      </style>
+  </head>
+  <body>
+    <div id='container'>
+        <div id='chor-container'>
+            <svg id='svg-chor'></svg>
+        </div>
+      <div id='bar-container'>
+        <svg id='svg-bar'></svg>
+      </div>
+
+    </div>
+
+    <script type="text/javascript">
+      var myMasterData;
+      var myBarData;
+      var myChorData;
+      var margin_bar = {top: 10, right: 10, bottom: 40, left: 140};
+      var svgWidth_bar = 950
+      var svgHeight_bar = 700
+      var gWidth_bar = svgWidth_bar - margin_bar.left - margin_bar.right;
+      var gHeight_bar = svgHeight_bar - margin_bar.top - margin_bar.bottom;
+      var margin_chor = {top: 10, right: 10, bottom: 40, left: 140};
+      var svgWidth_chor = 950
+      var svgHeight_chor = 700
+      var gWidth_chor = svgWidth_chor - margin_chor.left - margin_chor.right;
+      var gHeight_chor = svgHeight_chor - margin_chor.top - margin_chor.bottom;
+
+      function getvalues()
+      {
+        d3.csv("https://raw.githubusercontent.com/bhargavinb12/va_12/master/data_sample2.csv")
+          .then(function(data)
+          {
+            myMasterData = data
+            generateBarData(myMasterData, null)   // master data and item to filter
+            createBarChart(myBarData);
+            generateChorData(myMasterData, null)
+            showMap(myChorData)
+          }
+        );
+      }
+      
+
+
+      function generateChorData(masterData, type) {
+          // console.log(type)
+        if(type === null || type === 'All' || type === 'all'){
+          myChorData = d3.nest()
+                      .key(function(d) { return d.State_Code;})
+                      .rollup(function(d) { 
+                        return d3.sum(d, function(g) {return g.Visit_Number; });
+                      })
+                      // .entries(masterData)
+                      .entries(masterData)
+                      .sort(function(a, b){ return d3.ascending(a.values, b.values); });
+          // myChorData.sort(function (a, b) {return a.value - b.value;})
+        }else{
+          myChorData = d3.nest()
+                      .key(function(d) { return d.State_Code;})
+                      .rollup(function(d) { 
+                        return d3.sum(d, function(g) {return g.Visit_Number; });
+                      })
+                      .entries(masterData.filter(function(d) {return d.Product_Reporting === type;}))
+                      // .sort(function(a, b){ return d3.ascending(a.values, b.values); });
+          // myChorData.sort(function (a, b) {return a.value - b.value;})
+        }
+        // console.log("CHOR CHART DATA\n")
+        myChorData.filter(function(d,i) {
+          // console.log(d.key, d.value)
+          // console.log(d.value)  
+          return null})
+      //   console.log(myChorData)
+      }
+      function generateBarData(masterData, state) {
+          console.log(state + "  State Bar Chart \n")
+
+          if(state === 'all' || state === 'All' || state === null){
+              myBarData = d3.nest()
+                  .key(function(d) { return d.Product_Reporting;})
+                  .rollup(function(d) {
+                      return d3.sum(d, function(g) {return g.Visit_Number; });
+                  })
+                  .entries(masterData)
+                  .sort(function(a, b){ return d3.ascending(a.values, b.values); });
+              myBarData.sort(function (a, b) {return a.value - b.value;})
+          }else{
+              if(state < 10){
+                  state = state.replace(/^0+(?!\.|$)/, '')   // removing leading 0 from state code
+              }
+              myBarData = d3.nest()
+                  .key(function(d) { return d.Product_Reporting;})
+                  .rollup(function(d) {
+                      return d3.sum(d, function(g) {return g.Visit_Number; });
+                  })
+                  .entries(masterData.filter(function(d) {return d.State_Code === state;}))
+                  .sort(function(a, b){ return d3.ascending(a.values, b.values); });
+              myBarData.sort(function (a, b) {return a.value - b.value;})
+          }
+          // console.log("BARCHART DATA \n")
+          // console.log(myBarData)
+      }
+
+      function removeBarChart(){
+          var svg_g = d3.select("#svg_bar_g")
+          svg_g.remove()
+      }
+
+
+      
+      function showMap(myChorData){
+        const mapWidth = 960
+        const mapHeight = 600
+
+        var svg = d3.select("#svg-chor")
+            .attr("width",mapWidth)
+            .attr("height",mapHeight);
+
+        //var idFormat = new format("dd")
+
+        var visits = d3.map();
+        myChorData.map(function(d,i) { 
+          if(d.key > 10){
+         visits.set(d.key, d.value); 
+          }else{
+           visits.set(("0"+d.key).slice(-2), d.value); 
+          }})
+        var path = d3.geoPath();
+
+        var x = d3.scaleLinear()
+            .domain([11,20])
+            .rangeRound([500, 860]);
+
+        var color = d3.scaleThreshold()
+            .domain(d3.range(12, 20))
+            .range(d3.schemeBlues[9]);
+
+        var colorQ = d3.scaleQuantize()
+        .domain(1,10)
+        .range(d3.schemeBlues[9]);
+
+// ============== LEGEND =================== //
+        var g = svg.append("g")
+                .attr("class", "key")
+                .attr("transform", "translate(0,40)");
+
+            g.selectAll("rect")
+            .data(color.range().map(function(d) {
+                d = color.invertExtent(d);
+                if (d[0] == null) d[0] = x.domain()[0];
+                if (d[1] == null) d[1] = x.domain()[1];
+                return d;
+                }))
+            .enter().append("rect")
+                .attr("height", 8)
+                .attr("x", function(d) { return x(d[0]); })
+                .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+                .attr("fill", function(d) { return color(d[0]); });
+
+            g.append("text")
+                .attr("class", "caption")
+                .attr("x", x.range()[0])
+                .attr("y", -6)
+                .attr("fill", "#000")
+                .attr("text-anchor", "start")
+                .attr("font-weight", "bold")
+                .text("Product Reporting");
+
+            // g.call(d3.axisBottom(x)
+            //     .tickSize(10)
+            //     .tickFormat(function(x, i) { return i ? x : x + "Clicks"; })
+            //     .tickValues(color.domain()))
+            // .select(".domain")
+            //     .remove();
+// ============== END LEGEND =================== //
+
+            var promises = [d3.json("https://d3js.org/us-10m.v1.json")] 
+            Promise.all(promises).then(ready)
+            function ready([us]) {
+              // Country Border line
+                svg.append("path")
+                  .attr('stroke',"#000")
+                  .attr("stroke-width", 1)
+                  .attr("class", "country-border")
+                  .attr("d", path(topojson.feature(us, us.objects.nation)));
+
+              // Satate border lines
+                svg.append("path")
+                  .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+                  .attr("class", "state-border")
+                  .attr("d", path);
+
+              // indivual states
+              var state_g = svg.append("g")
+                  state_g.selectAll("path")
+                  .data(topojson.feature(us, us.objects.states).features)
+                  .enter().append("path")
+                  .attr("class","state")
+                  .on("mouseover", function(d) {
+                      console.log("State ID: "+d.id + " Visit_Number: "+d.Visit_Number)
+                      removeBarChart()
+                      generateBarData(myMasterData, d.id);
+                      createBarChart(myBarData)
+                        })
+                  .on("mouseout", function(d) {
+                      removeBarChart()
+                      generateBarData(myMasterData, null);
+                      createBarChart(myBarData)
+                  })
+                  .attr("fill", function(d) { return color((d.Visit_Number = visits.get(d.id))/100); })
+                  .attr("d", path)
+                  .append("title")
+                  .text(function(d) { return "State ID: "+ d.id + " Visit_Number: " + d.Visit_Number; });
+            }
+        }
+      function createBarChart(chartData) {
+          // console.log(chartData)
+          var svg = d3.select("#svg-bar")
+              .attr("width", svgWidth_bar)
+              .attr("height", svgHeight_bar)
+              .append("g")
+              .attr("id", "svg_bar_g")
+              .attr("width", gWidth_bar)
+              .attr("height", gHeight_bar)
+              .attr("transform", `translate(${margin_bar.left},${margin_bar.top})`);
+
+          // generate scales
+          var yScale = d3.scaleBand()
+              .domain(chartData.map( function(d)
+              { return d.key;
+              }))
+              .range([0, gHeight_bar])
+              .paddingInner(0.15);
+
+          var xScale = d3.scaleLinear()
+              .domain([0, d3.max(chartData, function(d) { return (d.value/100); })])
+              .range([0, gWidth_bar]);
+
+          // generate axis
+          svg.append("g")
+              .attr("transform", "translate(20,0)")
+              .call(d3.axisLeft(yScale));
+
+          svg.append("g")
+          //.attr("transform", "translate(" + (svgWidth_bar) + ")")
+              .attr("transform", "translate("+ (20) +"," + (gHeight_bar) + ")")
+              .call(d3.axisBottom(xScale));
+
+          // generate bars
+          svg.selectAll("rect")
+              .data(chartData)
+              .enter()
+              .append("rect")
+              .attr("transform", "translate(20,0)")
+              .attr("x", 0)
+              .attr("y", function(d, i)
+              {
+                  return yScale(d.key)
+              })
+              .attr("height", function(d, i)
+              {
+                  return yScale.bandwidth();
+              })
+              .attr("width", function(d, i)
+              {
+                  // console.log("i: "+i+"  W: "+xScale(d.value/1000000));
+                  return xScale(d.value/100)
+              })
+              .attr("class", "myrect")
+              .on("mouseover", function(d) {
+                  // console.log(d.key)
+                  generateChorData(myMasterData,d.key)
+                  showMap(myChorData);
+              })
+              .on("mouseout", function(d) {
+                  // console.log(d.key)
+                  generateChorData(myMasterData,null)
+                  showMap(myChorData);
+              })
+      }
+      
+      window.onload = getvalues();
+  </script>
+  </body>
+</html>

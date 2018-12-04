@@ -1,0 +1,19 @@
+{
+   "products":{
+      "nan":933109,
+      "Refinance":1149421,
+      "Personal":294023,
+      "Purchase":200045,
+      "Home Equity":104585,
+      "Business Loans":11556,
+      "Auto":58800,
+      "Reverse Mortgage":28262,
+      "Debt Relief":4699,
+      "Prequalification":144,
+      "CreditAnalyzer":269,
+      "AutoRefinance":6,
+      "CreditCards":14,
+      "Student Loans":24,
+      "AutoPurchase":15
+   }
+}
