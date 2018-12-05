@@ -185,7 +185,7 @@
         const chart = {};
         chart.update = function (stateAbv) {
           const data = lossByState.get(stateAbv);
-
+			console.log('Damage data:', data);
           x.domain([
             0,
             data[data.length - 1].Amount
@@ -318,7 +318,9 @@
 
           statePath
             .each(d => {
+				console.log("Each d in state path", d);
               const stateAbv = d.properties.ABV;
+			  console.log("state abv", stateAbv);
               if (stateAbv) {
                 const entry = lossByStateByDamage.get(stateAbv).get(damageDescp);
                 d.value = entry ? entry.Amount : null;

@@ -83,12 +83,10 @@
       d3.csv("https://raw.githubusercontent.com/anubala16/VA_D3Vizzes/master/csource_subset40k.csv"),
       d3.json("https://raw.githubusercontent.com/anubala16/VA_Vega/master/us-10m.json")
     ]).then(([in_data, us]) => {
-		d.User_Count = 0
-      in_data.forEach(d => {
+	  in_data.forEach(d => {
         d.User_Count += 1
       });
 
-      // Data for choropleth chart
       const stateCodeToStateAbv = d3.nest()
         .key(d => d.State_Code)
         .rollup(v => v[0].State_Abv)
@@ -96,32 +94,36 @@
 
       const totalCSrcByState = d3.nest()
         .key(d => d.State_Abv)
-        .rollup(v => d3.sum(v, d => d.Amount))
+        .rollup(v => d3.sum(v, d => 1))
         .map(in_data);
-      const lossByStateByDamage = d3.nest()
+      const CSrcByStateByCSrc = d3.nest()
         .key(d => d.State_Abv)
-        .key(d => d.Damage_Descp)
-        .rollup(v => v[0])
+        .key(d => d.CSrc_Simplified)
+        .rollup(v => { //console.log("rollup csrc by state by csrc:", v.len); 
+		v.len   })
         .map(in_data);
-      lossByStateByDamage.each((lossByDamage, stateAbv) => {
-        lossByDamage.set("All", { State_Abv: stateAbv, Damage_Descp: "All", Amount: totalLossByState.get(stateAbv) })
+      
+	  CSrcByStateByCSrc.each((UsersByCSrc, stateAbv) => {
+        UsersByCSrc.set("All", { State_Abv: stateAbv, CSrc_Simplified: "All", User_Count: totalCSrcByState.get(stateAbv) })
       });
-      const lossByDamage = d3.nest()
-        .key(d => d.Damage_Descp)
+      const UsersByCSrc = d3.nest()
+        .key(d => d.CSrc_Simplified)
         .map(in_data);
-      lossByDamage.set("All", totalLossByState.entries().map((d) => ({ State_Abv: d.key, Amount: d.value })));
+      UsersByCSrc.set("All", totalCSrcByState.entries().map((d) => ({ State_Abv: d.key, User_Count: d.value })));
 
       // bar chart data 
-      const totalUsersByCsrc = d3.nest()
+      const totalUsersByCSrc = d3.nest()
         .key(d => d.CSrc_Simplified)
         .rollup(v => ({ CSrc_Simplified: v[0].CSrc_Simplified, User_Count: d3.sum(v, d => 1) }))
         .map(in_data);
       const CSrcByState = d3.nest()
-        .key(d => d.State_Abbr)
+        .key(d => d.State_Abv)
         .map(in_data);
-      CSrcByState.set("All", totalUsersByCsrc.values());
+      CSrcByState.set("All", totalUsersByCSrc.values());
       CSrcByState.each(csrcs => {
-        csrcs.sort((a, b) => d3.descending(a.User_Count, b.User_Count))
+		//console.log("CSrc By State:", csrcs);
+        csrcs.sort((a, b) => d3.ascending(a.User_Count, b.User_Count))
+		//console.log("Csrcs by state:", csrcs);
       });
 
       const choroplethChartContainer = d3.select("#choropleth-chart");
@@ -133,17 +135,19 @@
       const barChartChart = barChartContainer.select(".chart-chart");
 
       // canvas size 
+      //const chartWidth = choroplethChartChart.node().clientWidth;
       const chartWidth = choroplethChartChart.node().clientWidth;
+      //const chartHeight = chartWidth;
       const chartHeight = chartWidth;
 
       let choroplethChart;
       let barChart;
 
       // display the map 
-	  //choroplethChart = renderChoroplethChart(choroplethChartChart, chartWidth, chartHeight);
+	  choroplethChart = renderChoroplethChart(choroplethChartChart, chartWidth, chartHeight);
 
       // Display bar chart 
-	  barChart = renderBarChart(barChartChart, chartWidth, chartHeight);
+	//barChart = renderBarChart(barChartChart, chartWidth, chartHeight);
 
 	  // ---------------- bar chart ------------------------- 
       function renderBarChart(container, containerWidth, containerHeight) {
@@ -185,6 +189,7 @@
         const chart = {};
         chart.update = function (stateAbv) {
           const data = CSrcByState.get(stateAbv);
+		  console.log("CSrc data:", data);
 
           x.domain([
             0,
@@ -212,6 +217,9 @@
             .on("mouseover", function (d) {
               d3.select(this).attr("stroke-opacity", 1);
               const csrc = d.CSrc_Simplified;
+			  
+			  console.log('mouseover bar chart:', csrc);
+			  
 			  var html = "<div> <span class=\"tooltip_key\">C_Source: </span><span class=\"tooltip_val\">" + csrc + "</span></div>";
 			html += "<div> <span class=\"tooltip_key\">User Count: </span><span class=\"tooltip_val\">" + d.User_Count + "</span></div>";
 			$("#tooltip-container").html(html);
@@ -229,8 +237,9 @@
                 .style("top", (d3.event.pageY + 15) + "px")
                 .style("left", (d3.event.pageX - tooltip_width - 30) + "px");
             }
-              //choroplethChartTitle.text(damageDescp);
-              //choroplethChart.update(damageDescp);
+				console.log("updating the map");
+              choroplethChartTitle.text(csrc);
+              choroplethChart.update(csrc);
             })
             .on("mouseout", function () {
 				// remove the tool tip and refresh the graphs to reflect all the data 
@@ -239,15 +248,15 @@
 			  $(this).attr("border", "0");
               $(this).append("rect").attr("stroke", "none");
 			  $("#tooltip-container").hide();
-			  //choroplethChartTitle.text(damageDescp);
-              //choroplethChart.update(damageDescp);
+			  choroplethChartTitle.text(csrc);
+              choroplethChart.update(csrc);
             });
         }
         return chart;
       }
 	  
 	  // update the bar chart upon hover 
-      barChart.update("All");
+      //barChart.update("All");
 	  
 	  // ---------------- Map -------------------------
 	  function renderChoroplethChart(container, containerWidth, containerHeight) {
@@ -255,7 +264,8 @@
         const height = containerHeight;
 
         const states = topojson.feature(us, us.objects.states);
-
+		console.log("States in map:", states);
+		
         const projection = d3.geoAlbersUsa()
           .fitSize([width, height], states);
         const path = d3.geoPath().projection(projection);
@@ -267,6 +277,7 @@
           .attr("width", containerWidth)
           .attr("height", containerHeight);
 
+		console.log("Getting path in the map:");
         const statePath = svg
           .selectAll("path")
           .data(states.features)
@@ -276,12 +287,15 @@
           .attr("stroke", "#999")
           .attr("stroke-width", 0.5)
           .attr("fill", "#fff")
-          .each(d => d.properties.ABV = stateCodeToStateAbv.get(d.id))
+          .each(d => { d.properties.ABV = stateCodeToStateAbv.get(d.id)
+				console.log('finished setting all state codes', d.prop);
+		  })
           .on("mouseover", function (d) {
+			console.log("d on mouseover:", d);
             d3.select(this).raise().attr("stroke", "#000").attr("stroke-width", 2);
             const stateAbv = d.properties.ABV;
 			var html = "<div> <span class=\"tooltip_key\">State_Abv: </span><span class=\"tooltip_val\">" + stateAbv + "</span></div>";
-			html += "<div> <span class=\"tooltip_key\">Amount: </span><span class=\"tooltip_val\">" + d.value + "</span></div>";
+			html += "<div> <span class=\"tooltip_key\">User_Count: </span><span class=\"tooltip_val\">" + d.value + "</span></div>";
 			$("#tooltip-container").html(html);
 			$(this).attr("border", "1").attr("stroke", "#000000").attr("stroke-width", 2);
             $("#tooltip-container").show();
@@ -308,21 +322,26 @@
 			$("#tooltip-container").hide();barChartTitle.text(stateAbv);
             barChart.update(stateAbv);
           });
-
+		// console.log('Statepath done:', statePath);
         const chart = {};
-        chart.update = function (damageDescp) {
+        chart.update = function (csrc) {
           colorScale.domain([
             0,
-            d3.max(lossByDamage.get(damageDescp), d => d.Amount) / 0.75 // Increase the max value to avoid the darkest blue color
+            d3.max(UsersByCSrc.get(csrc), d => d.User_Count) / 0.75 // Increase the max value to avoid the darkest blue color
           ]);
 
           statePath
             .each(d => {
-              const stateAbv = d.properties.ABV;
+				console.log("is every code set yet?", d);
+              //const stateAbv = d.properties.ABV;
+			  const stateAbv = stateCodeToStateAbv.get(d.id);
+			  console.log("Please work:", stateAbv);
               if (stateAbv) {
-                const entry = lossByStateByDamage.get(stateAbv).get(damageDescp);
-                d.value = entry ? entry.Amount : null;
+				console.log('Got the stateAbv!', stateAbv);
+                const entry = CSrcByStateByCSrc.get(stateAbv).get(csrc);
+                d.value = entry ? entry.User_Count : null;
               } else {
+				console.log('What!?');
                 d.value = null;
               }
             })
