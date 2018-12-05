@@ -80,7 +80,7 @@
   </div>
   <script>
 	Promise.all([
-      d3.csv("https://raw.githubusercontent.com/anubala16/VA_D3Vizzes/master/csource_subset.csv"),
+      d3.csv("https://raw.githubusercontent.com/anubala16/VA_D3Vizzes/master/data_subset40k.csvv"),
       d3.json("https://raw.githubusercontent.com/anubala16/VA_Vega/master/us-10m.json")
     ]).then(([in_data, us]) => {
       in_data.forEach(d => {
@@ -94,7 +94,7 @@
         .rollup(v => v[0].State_Abv)
         .map(in_data);
 
-      const totalLossByState = d3.nest()
+      const totalCSrcByState = d3.nest()
         .key(d => d.State_Abv)
         .rollup(v => d3.sum(v, d => d.Amount))
         .map(in_data);
@@ -163,7 +163,7 @@
 
         const xAxis = d3.axisBottom()
           .scale(x)
-          .ticks(5);
+          .ticks(8);
 
         const yAxis = d3.axisLeft()
           .scale(y);
