@@ -80,12 +80,12 @@
   </div>
   <script>
 	Promise.all([
-      d3.csv("https://raw.githubusercontent.com/anubala16/VA_D3Vizzes/master/data_subset40k.csvv"),
+      d3.csv("https://raw.githubusercontent.com/anubala16/VA_D3Vizzes/master/csource_subset40k.csv"),
       d3.json("https://raw.githubusercontent.com/anubala16/VA_Vega/master/us-10m.json")
     ]).then(([in_data, us]) => {
+		d.User_Count = 0
       in_data.forEach(d => {
-        //d.Amount = +d.Amount;
-		d.userCount += 1
+        d.User_Count += 1
       });
 
       // Data for choropleth chart
@@ -112,16 +112,16 @@
       lossByDamage.set("All", totalLossByState.entries().map((d) => ({ State_Abv: d.key, Amount: d.value })));
 
       // bar chart data 
-      const totalLossByDamage = d3.nest()
-        .key(d => d.Damage_Descp)
-        .rollup(v => ({ Damage_Descp: v[0].Damage_Descp, Amount: d3.sum(v, d => d.Amount) }))
+      const totalUsersByCsrc = d3.nest()
+        .key(d => d.CSrc_Simplified)
+        .rollup(v => ({ CSrc_Simplified: v[0].CSrc_Simplified, User_Count: d3.sum(v, d => 1) }))
         .map(in_data);
-      const lossByState = d3.nest()
-        .key(d => d.State_Abv)
+      const CSrcByState = d3.nest()
+        .key(d => d.State_Abbr)
         .map(in_data);
-      lossByState.set("All", totalLossByDamage.values());
-      lossByState.each(damages => {
-        damages.sort((a, b) => d3.ascending(a.Amount, b.Amount))
+      CSrcByState.set("All", totalUsersByCsrc.values());
+      CSrcByState.each(csrcs => {
+        csrcs.sort((a, b) => d3.descending(a.User_Count, b.User_Count))
       });
 
       const choroplethChartContainer = d3.select("#choropleth-chart");
@@ -140,7 +140,7 @@
       let barChart;
 
       // display the map 
-	  choroplethChart = renderChoroplethChart(choroplethChartChart, chartWidth, chartHeight);
+	  //choroplethChart = renderChoroplethChart(choroplethChartChart, chartWidth, chartHeight);
 
       // Display bar chart 
 	  barChart = renderBarChart(barChartChart, chartWidth, chartHeight);
@@ -184,13 +184,13 @@
 
         const chart = {};
         chart.update = function (stateAbv) {
-          const data = lossByState.get(stateAbv);
+          const data = CSrcByState.get(stateAbv);
 
           x.domain([
             0,
-            data[data.length - 1].Amount
+            data[data.length - 1].User_Count
           ]);
-          y.domain(data.map(d => d.Damage_Descp));
+          y.domain(data.map(d => d.CSrc_Simplified));
 
           xAxisG.call(xAxis);
           yAxisG.call(yAxis);
@@ -202,8 +202,8 @@
             .append("rect")
             .attr("fill", "#2980b9 ")
             .attr("x", 0)
-            .attr("y", d => y(d.Damage_Descp))
-            .attr("width", d => x(d.Amount))
+            .attr("y", d => y(d.CSrc_Simplified))
+            .attr("width", d => x(d.User_Count))
             .attr("height", y.bandwidth())
             .attr("stroke", "#000")
             .attr("stroke-width", 2)
@@ -211,9 +211,9 @@
             .style("pointer-events", "all")
             .on("mouseover", function (d) {
               d3.select(this).attr("stroke-opacity", 1);
-              const damageDescp = d.Damage_Descp;
-			  var html = "<div> <span class=\"tooltip_key\">Damage_Descp: </span><span class=\"tooltip_val\">" + damageDescp + "</span></div>";
-			html += "<div> <span class=\"tooltip_key\">Amount: </span><span class=\"tooltip_val\">" + d.Amount + "</span></div>";
+              const csrc = d.CSrc_Simplified;
+			  var html = "<div> <span class=\"tooltip_key\">C_Source: </span><span class=\"tooltip_val\">" + csrc + "</span></div>";
+			html += "<div> <span class=\"tooltip_key\">User Count: </span><span class=\"tooltip_val\">" + d.User_Count + "</span></div>";
 			$("#tooltip-container").html(html);
 			$(this).attr("border", "1").attr("stroke", "#000000").attr("stroke-width", 2);
             $("#tooltip-container").show();
@@ -229,18 +229,18 @@
                 .style("top", (d3.event.pageY + 15) + "px")
                 .style("left", (d3.event.pageX - tooltip_width - 30) + "px");
             }
-              choroplethChartTitle.text(damageDescp);
-              choroplethChart.update(damageDescp);
+              //choroplethChartTitle.text(damageDescp);
+              //choroplethChart.update(damageDescp);
             })
             .on("mouseout", function () {
 				// remove the tool tip and refresh the graphs to reflect all the data 
 			  d3.select(this).attr("stroke-opacity", 0);
-              const damageDescp = "All";
+              const csrc = "All";
 			  $(this).attr("border", "0");
               $(this).append("rect").attr("stroke", "none");
 			  $("#tooltip-container").hide();
-			  choroplethChartTitle.text(damageDescp);
-              choroplethChart.update(damageDescp);
+			  //choroplethChartTitle.text(damageDescp);
+              //choroplethChart.update(damageDescp);
             });
         }
         return chart;
