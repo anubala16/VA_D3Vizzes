@@ -14,9 +14,14 @@ def readCSV(csrc):
     df = pd.read_csv(file)
     print("Sample data shape:", df.shape)
 
-    # takes a long time!
+    # simplify csource
     df['CSrc Simplified'] = df.apply(lambda row: simplifyCSrc(row, csrc), axis=1)
+
+    # add a column with csource frequency
     df['CSrc Freq'] = df.groupby('CSrc Simplified')['CSrc Simplified'].transform('count')
+
+    df.drop(['Unnamed: 0', 'Visit Number', 'Product', 'Visitor_ID'], axis=1, inplace=True)
+
 
     ''' Done with processing csource; exporting entire df to csv file '''
     df.to_csv('csource_subset.csv')
