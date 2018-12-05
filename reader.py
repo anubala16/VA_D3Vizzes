@@ -3,6 +3,7 @@ import json
 
 def readCSV():
     stateCodes = getStateCodes()
+    stateAbbrs = getStateAbbrs()
 
     file = "data.csv"
     df = pd.read_csv(file)
@@ -19,10 +20,10 @@ def readCSV():
     ''' Delete non-US rows '''
     df = getUSRecords(df)
     print("Only US Records:", df.shape)
-    df.drop(columns=['Country'], inplace = True)
+    df.drop(columns=['Country'], inplace=True)
 
-    # sampling only 30% of data
-    df = df.sample(frac=0.3)
+    # sampling only 32% of data
+    df = df.sample(frac=0.32)
 
     ''' Separate date '''
     df = processDate(df)
@@ -39,16 +40,17 @@ def readCSV():
     df = preprocessRow(df)
 
     # Add state code column
-    state = str(df['State'][1]).strip()
-    code = stateCodes[state]
-    df['State Code'] = df['State'].replace('(.*)', code, regex=True)
+    df['State Code'] = df.apply( lambda row: getStateCode(row, stateCodes), axis=1)
+
+    # Add state abbr column
+    df['State Abbr'] = df.apply(lambda row: getStateAbbr(row, stateAbbrs), axis=1)
 
     # removing the comma at the end of every Month value
-    df['Month'] = df['Month'].str[:-1].astype(int)
+    df['Day'] = df['Day'].str[:-1].astype(int)
 
     ''' Done with preprocessing; exporting entire df to csv file '''
-    df.to_csv('data_subset.csv')
-    print("Wrote", df.shape[0], "rows to data_subset.csv")
+    df.to_csv('data_preprocessed.csv')
+    print("Wrote", df.shape[0], "rows to data_preprocessed.csv")
 
 def preprocessRow(df):
     csources = {}
@@ -101,7 +103,7 @@ def preprocessRow(df):
 def getStateCodes():
     states = {
         "alabama": 1,
-        "alaska": 2,
+        "alaska":2,
         "arizona": 4,
         "arkansas": 5,
         "california": 6,
@@ -150,16 +152,88 @@ def getStateCodes():
         "west virginia": 54,
         "wisconsin": 55,
         "wyoming": 56,
+        "district of columbia": -1,
+        "united states": -2,
     }
     return states
 
+def getStateAbbrs():
+    states = {
+        "alabama": "AL",
+        "alaska": "AK",
+        "arizona": "AZ",
+        "arkansas": "AR",
+        "california": "CA",
+        "colorado": "CO",
+        "connecticut": "CT",
+        "delaware": "DE",
+        "florida": "FL",
+        "georgia": "GA",
+        "hawaii": "HI",
+        "idaho": "ID",
+        "illinois": "IL",
+        "indiana": "IN",
+        "iowa": "IA",
+        "kansas": "KS",
+        "kentucky": "KY",
+        "louisiana": "LA",
+        "maine": "ME",
+        "maryland": "MD",
+        "massachusetts": "MA",
+        "michigan": "MI",
+        "minnesota": "MN",
+        "mississippi": "MS",
+        "missouri": "MO",
+        "montana": "MT",
+        "nebraska": "NE",
+        "nevada": "NV",
+        "new hampshire": "NH",
+        "new jersey": "NJ",
+        "new mexico": "NM",
+        "new york": "NY",
+        "north carolina": "NC",
+        "north dakota": "ND",
+        "ohio": "OH",
+        "oklahoma": "OK",
+        "oregon": "OR",
+        "pennsylvania": "PA",
+        "rhode island": "RI",
+        "south carolina": "SC",
+        "south dakota": "SD",
+        "tennessee": "TN",
+        "texas": "TX",
+        "utah": "UT",
+        "vermont": "VT",
+        "virginia": "VA",
+        "washington": "WA",
+        "west virginia": "WV",
+        "wisconsin": "WI",
+        "wyoming": "WY",
+    }
+    return states
+
+def getStateCode(row, stateCodes):
+    state = str(row['State']).strip()
+    return stateCodes[state]
+
+def getStateAbbr(row, stateAbbrs):
+    state = str(row['State']).strip()
+    return stateAbbrs[state]
+
 def getUSRecords(df):
-    return df.loc[df['Country'] == 'united states)']
+    df = df.loc[df['Country'] == 'united states)']
+    #mask = df.St ate.astype(str).str.strip() in (['united states', 'aol', 'district of columbia'])
+    df = df[~df.State.str.contains('aol')]
+    df = df[~df.State.str.contains('united states')]
+    df = df[~df.State.str.contains('district')]
+    return df
+    #df.loc[df['State'] not in ['united states', 'aol', 'district of columbia']]
 
 def processDate(df):
     new = df['Date'].str.split(" ", n=2, expand=True)
-    df['Day'] = new[0]
-    df['Month'] = new[1]
+    print("date shape:\n", new)
+    df['Month'] = new[0]
+    df['Day'] = new[1]
     return df
 
 def processCountryStates(df):
