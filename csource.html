@@ -80,7 +80,7 @@
   </div>
   <script>
 	Promise.all([
-      d3.csv("https://raw.githubusercontent.com/anubala16/VA_Vega/master/losses2015_transformed.csv"),
+      d3.csv("https://raw.githubusercontent.com/anubala16/VA_D3Vizzes/master/csource_subset.csv"),
       d3.json("https://raw.githubusercontent.com/anubala16/VA_Vega/master/us-10m.json")
     ]).then(([in_data, us]) => {
       in_data.forEach(d => {
