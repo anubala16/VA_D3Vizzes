@@ -152,8 +152,6 @@ def getStateCodes():
         "west virginia": 54,
         "wisconsin": 55,
         "wyoming": 56,
-        "district of columbia": -1,
-        "united states": -2,
     }
     return states
 
